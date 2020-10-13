@@ -1,3 +1,5 @@
 .vscode/
 venv/
 __pycache__/
+reports/*.sty
+reports/*.pdf

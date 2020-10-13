@@ -51,7 +51,7 @@ class SimplePerceptron(Model):
         if self._bias is not None:
             self._bias += self._learning_rate * np.ones_like(y).T @ (y_hat - y)
 
-    def validation_step(self, val_batch: tuple[np.ndarray, np.ndarray]):
+    def validation_step(self, val_batch: tuple[np.ndarray, np.ndarray]) -> float:
         x, y_hat = val_batch
         y = self(x)
         error = np.abs(y - y_hat).mean(axis=0)

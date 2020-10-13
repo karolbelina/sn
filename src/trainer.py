@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 
 
-class Trainer(ABC):
+class Trainer:
     def __init__(self, max_epochs: Optional[int] = None, epsilon: float = 0) -> None:
         self._max_epochs = max_epochs if max_epochs is not None else np.inf
         self._epsilon = epsilon

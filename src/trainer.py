@@ -10,7 +10,15 @@ class Trainer:
         self._max_epochs = max_epochs if max_epochs is not None else np.inf
         self._epsilon = epsilon
 
-    def fit(self, model: Model, train_dataloader: DataLoader, val_dataloader: DataLoader) -> None:
+    def fit(
+        self,
+        model: Model,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None
+    ) -> None:
+        if val_dataloader is None:
+            val_dataloader = train_dataloader
+
         val_error = None
         epoch_number = 0
 

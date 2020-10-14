@@ -17,7 +17,7 @@ class Adaline(Model):
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         z = x @ self._weights + self._bias
-        a = np.where(z > 0, 1, -1)
+        a = Adaline._activation_fn(z)
 
         return a
 

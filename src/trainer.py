@@ -1,6 +1,4 @@
-from abc import ABC, abstractmethod
 from data_loader import DataLoader
-from itertools import chain
 from model import Model
 from typing import Optional
 

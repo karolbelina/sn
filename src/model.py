@@ -10,11 +10,3 @@ class Model(ABC):
     @abstractmethod
     def forward(self, x: np.ndarray) -> np.ndarray:
         pass
-
-    @abstractmethod
-    def training_step(self, batch: tuple[np.ndarray, np.ndarray]):
-        pass
-
-    @abstractmethod
-    def validation_step(self, val_batch: tuple[np.ndarray, np.ndarray]):
-        pass

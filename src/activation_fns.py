@@ -42,11 +42,13 @@ class HyperbolicTangent(ActivationFunction):
 class Softmax(ActivationFunction):
     def __call__(self, x: np.ndarray) -> np.ndarray:
         # for numerical stability make the maximum of x to be 0
-        e_x = np.exp(x - np.max(x))
+        stable_x = x - x.max(axis=1)[:, None]
+        exp_x = np.exp(stable_x)
+        soft = exp_x / exp_x.sum(axis=1)[:, None]
+        
+        self.cache = soft
 
-        return e_x / e_x.sum()
+        return soft
     
     def derivative(self, x: np.ndarray) -> np.ndarray:
-        s_x = self(x)
-
-        return -np.outer(s_x, s_x) + np.diag(s_x.flatten())
+        return self.cache * (x - (x * self.cache).sum(axis=1)[:, None])

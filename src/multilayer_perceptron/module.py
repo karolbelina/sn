@@ -13,7 +13,6 @@ class MultilayerPerceptron(Model):
         layer_sizes: list[int],
         activation_fns: Optional[list[callable]] = None,
         random_fn: RandomFunction = Normal(),
-        learning_rate: float = 1e-3,
     ) -> None:
         if activation_fns is None:
             activation_fns = [Sigmoid() for _ in range(len(layer_sizes) - 2)]
@@ -30,12 +29,6 @@ class MultilayerPerceptron(Model):
             x = layer.feedforward(x)
 
         return x
-
-    def training_step(self, batch: tuple[np.ndarray, np.ndarray]):
-        pass
-
-    def validation_step(self, val_batch: tuple[np.ndarray, np.ndarray]) -> float:
-        pass
 
     def __str__(self) -> str:
         return "Multilayer perceptron"

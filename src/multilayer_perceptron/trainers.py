@@ -35,7 +35,7 @@ class Trainer(AbstractTrainer):
 
         return stable_output - label
 
-    def fit(self, model: MultilayerPerceptron) -> None:
+    def fit(self, model: MultilayerPerceptron) -> float:
         for x, y in self._train_dataloader.get_batches():
             y_hat = model(x)
             da = self._cost_fn_backward(y_hat, y)
@@ -51,13 +51,19 @@ class Trainer(AbstractTrainer):
     def _validate(self, model: Model, val_batch: tuple[np.ndarray, np.ndarray]) -> float:
         x, y_hat = val_batch
         y = model(x)
-        error = self._cost_fn(y, y_hat)
+        
+        loss = self._cost_fn(y, y_hat)
 
         result_classes = y_hat.argmax(axis=1)
         label_classes = y.argmax(axis=1)
-        acc = (result_classes == label_classes).mean()
 
-        print(f"loss = {error}, acc = {acc * 100}%")
+        Nc = (result_classes == label_classes).sum()
+        Nt = len(result_classes)
+        
+        accuracy = Nc / Nt
+        error = (Nt - Nc) / Nt
+
+        print(f"loss = {loss:.2f}, acc = {accuracy:.2%}")
 
         return error
     

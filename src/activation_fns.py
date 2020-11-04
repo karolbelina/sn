@@ -44,11 +44,8 @@ class Softmax(ActivationFunction):
         # for numerical stability make the maximum of x to be 0
         stable_x = x - x.max(axis=1)[:, None]
         exp_x = np.exp(stable_x)
-        soft = exp_x / exp_x.sum(axis=1)[:, None]
-        
-        self.cache = soft
 
-        return soft
+        return exp_x / exp_x.sum(axis=1)[:, None]
     
     def derivative(self, x: np.ndarray) -> np.ndarray:
-        return self.cache * (x - (x * self.cache).sum(axis=1)[:, None])
+        return np.ones_like(x)

@@ -6,5 +6,5 @@ from typing import Optional
 
 class Trainer(ABC):
     @abstractmethod
-    def fit(self, model: Model, callback: callable) -> float:
+    def fit(self, model: Model) -> object:
         pass

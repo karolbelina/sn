@@ -35,7 +35,7 @@ class SGDTrainer(Trainer):
 
         return stable_output - label
 
-    def fit(self, model: MultilayerPerceptron, callback: callable = lambda x: None) -> float:
+    def fit(self, model: MultilayerPerceptron) -> None:
         for x, y in self._train_dataloader.get_batches():
             y_hat = model(x)
             da = self._cost_fn_backward(y_hat, y)
@@ -43,16 +43,8 @@ class SGDTrainer(Trainer):
             for layer in reversed(model._layers):
                 dw, db, da = layer.backpropagate(da)
                 self._update_layer_weights(layer, dw, db)
-        
-        val_error = self._validate(model, callback)
-
-        return val_error
     
-    def _validate(
-        self,
-        model: Model,
-        callback: callable
-    ) -> float:
+    def validate(self, model: Model) -> tuple[float, object]:
         def calculate_report(data: tuple[np.ndarray, np.ndarray]):
             x, y_hat = data
             y = model(x)
@@ -73,14 +65,12 @@ class SGDTrainer(Trainer):
         train_loss, train_accuracy, _ = calculate_report(self._val_dataloader.get_data())
         val_loss, val_accuracy, val_error = calculate_report(self._val_dataloader.get_data())
 
-        callback({
+        return (val_error, {
             'train_loss': train_loss,
             'train_accuracy': train_accuracy,
             'val_loss': val_loss,
             'val_accuracy': val_accuracy
         })
-
-        return val_error
     
     def _update_layer_weights(self, layer: Layer, dw: np.ndarray, db: np.ndarray):
         layer.update_weights(self._learning_rate * dw)

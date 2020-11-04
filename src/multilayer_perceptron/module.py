@@ -1,4 +1,5 @@
-from activation_fns import Sigmoid, Softmax
+from activation_fns import ActivationFunction, Sigmoid, Softmax
+from copy import copy, deepcopy
 from layers import FullyConnectedLayer as FCL
 from model import Model
 from random_fns import RandomFunction, Normal
@@ -11,7 +12,7 @@ class MultilayerPerceptron(Model):
     def __init__(
         self,
         layer_sizes: list[int],
-        activation_fns: Optional[list[callable]] = None,
+        activation_fns: Optional[list[ActivationFunction]] = None,
         random_fn: RandomFunction = Normal(),
     ) -> None:
         if activation_fns is None:
@@ -29,6 +30,14 @@ class MultilayerPerceptron(Model):
             x = layer.feedforward(x)
 
         return x
+    
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
 
     def __str__(self) -> str:
         return "Multilayer perceptron"

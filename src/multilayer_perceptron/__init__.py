@@ -1,2 +1,2 @@
 from .module import MultilayerPerceptron
-from .trainers import Trainer
+from .trainers import SGDTrainer

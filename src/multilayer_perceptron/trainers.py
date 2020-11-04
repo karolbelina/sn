@@ -2,13 +2,13 @@ from .module import MultilayerPerceptron
 from data_loader import DataLoader
 from layers import Layer
 from model import Model
-from trainer import Trainer as AbstractTrainer
+from trainer import Trainer
 from typing import Optional
 
 import numpy as np
 
 
-class Trainer(AbstractTrainer):
+class SGDTrainer(Trainer):
     def __init__(
         self,
         train_dataloader: DataLoader,
@@ -35,7 +35,7 @@ class Trainer(AbstractTrainer):
 
         return stable_output - label
 
-    def fit(self, model: MultilayerPerceptron) -> float:
+    def fit(self, model: MultilayerPerceptron, callback: callable = lambda x: None) -> float:
         for x, y in self._train_dataloader.get_batches():
             y_hat = model(x)
             da = self._cost_fn_backward(y_hat, y)
@@ -44,28 +44,43 @@ class Trainer(AbstractTrainer):
                 dw, db, da = layer.backpropagate(da)
                 self._update_layer_weights(layer, dw, db)
         
-        val_error = self._validate(model, next(self._val_dataloader.get_batches()))
+        val_error = self._validate(model, callback)
 
         return val_error
     
-    def _validate(self, model: Model, val_batch: tuple[np.ndarray, np.ndarray]) -> float:
-        x, y_hat = val_batch
-        y = model(x)
-        
-        loss = self._cost_fn(y, y_hat)
+    def _validate(
+        self,
+        model: Model,
+        callback: callable
+    ) -> float:
+        def calculate_report(data: tuple[np.ndarray, np.ndarray]):
+            x, y_hat = data
+            y = model(x)
 
-        result_classes = y_hat.argmax(axis=1)
-        label_classes = y.argmax(axis=1)
+            loss = self._cost_fn(y, y_hat)
 
-        Nc = (result_classes == label_classes).sum()
-        Nt = len(result_classes)
-        
-        accuracy = Nc / Nt
-        error = (Nt - Nc) / Nt
+            result_classes = y_hat.argmax(axis=1)
+            label_classes = y.argmax(axis=1)
 
-        print(f"loss = {loss:.2f}, acc = {accuracy:.2%}")
+            Nc = (result_classes == label_classes).sum()
+            Nt = len(result_classes)
+            
+            accuracy = Nc / Nt
+            error = (Nt - Nc) / Nt
 
-        return error
+            return loss, accuracy, error
+
+        train_loss, train_accuracy, _ = calculate_report(self._val_dataloader.get_data())
+        val_loss, val_accuracy, val_error = calculate_report(self._val_dataloader.get_data())
+
+        callback({
+            'train_loss': train_loss,
+            'train_accuracy': train_accuracy,
+            'val_loss': val_loss,
+            'val_accuracy': val_accuracy
+        })
+
+        return val_error
     
     def _update_layer_weights(self, layer: Layer, dw: np.ndarray, db: np.ndarray):
         layer.update_weights(self._learning_rate * dw)

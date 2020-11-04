@@ -25,3 +25,14 @@ class DataLoader:
             x = np.vstack(x)
             y_hat = np.vstack(y_hat)
             yield x, y_hat
+    
+    def get_data(self) -> tuple[np.ndarray, np.ndarray]:
+        if self.random:
+            random.shuffle(self.data)
+        
+        data = self.data
+        x, y_hat = zip(*data)
+        x = np.vstack(x)
+        y_hat = np.vstack(y_hat)
+        return x, y_hat
+

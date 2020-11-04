@@ -6,10 +6,5 @@ from typing import Optional
 
 class Trainer(ABC):
     @abstractmethod
-    def fit(
-        self,
-        model: Model,
-        train_dataloader: DataLoader,
-        val_dataloader: Optional[DataLoader] = None
-    ) -> float:
+    def fit(self, model: Model, callback: callable) -> float:
         pass

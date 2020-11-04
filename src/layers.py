@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from activation_fns import ActivationFunction
+from copy import copy, deepcopy
 from random_fns import RandomFunction
 
 import numpy as np
@@ -20,6 +21,10 @@ class Layer(ABC):
     
     @abstractmethod
     def update_biases(self, db: np.ndarray) -> None:
+        pass
+    
+    @abstractmethod
+    def __deepcopy__(self, memo):
         pass
 
 
@@ -65,3 +70,11 @@ class FullyConnectedLayer(Layer):
     
     def update_biases(self, db: np.ndarray) -> None:
         self._biases -= db
+    
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result

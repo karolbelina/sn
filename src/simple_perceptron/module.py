@@ -60,7 +60,7 @@ class SimplePerceptronTrainer(Trainer):
         else:
             self._val_dataloader = val_dataloader
     
-    def fit(self, model: SimplePerceptron) -> float:
+    def fit(self, model: SimplePerceptron, callback: callable = lambda x: None) -> float:
         for data_batch in self._train_dataloader.get_batches():
             self._training_step(model, data_batch)
 

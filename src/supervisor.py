@@ -15,6 +15,53 @@ class StopReason(Enum):
     EARLY_STOPPING = 3
 
 
+class ResearchSupervisor:
+    def __init__(
+        self,
+        model: Model,
+        trainer: Trainer,
+        max_epochs: Optional[int] = None,
+        epsilon: float = 0,
+        early_stopping_threshold: float = np.inf
+    ) -> None:
+        self._max_epochs = max_epochs if max_epochs is not None else np.inf
+        self._epsilon = epsilon
+        self._early_stopping_threshold = early_stopping_threshold
+
+        self._best_error = np.inf
+        self._best_report = None
+
+        self._model = model
+        self._error = np.inf
+
+        self._epoch_accuracy_threshold = np.inf
+        self._epoch_number = 0
+        
+        self._trainer = trainer
+
+    def __call__(self) -> tuple[int, StopReason]:
+        while True:
+            self._epoch_number += 1
+
+            self._trainer.fit(self._model)
+            self._error, _ = self._trainer.validate(self._model)
+
+            if self._error <= self._epsilon and np.isinf(self._epoch_accuracy_threshold):
+                self._epoch_accuracy_threshold = self._epoch_number
+            
+            if self._error < self._best_error:
+                self._best_error = self._error
+
+            error_delta = self._error - self._best_error
+            if error_delta >= self._early_stopping_threshold:
+                self._error = self._best_error
+                return self._epoch_accuracy_threshold, 1 - self._best_error
+
+            if self._epoch_number >= self._max_epochs:
+                self._error = self._best_error
+                return self._epoch_accuracy_threshold, 1 - self._best_error
+
+
 class Supervisor:
     def __init__(
         self,
@@ -76,7 +123,7 @@ class Supervisor:
                 if self._epoch_number >= self._max_epochs:
                     if not silent:
                         print("Reached the maximum number of epochs")
-                    return self._epoch_number, self._report, StopReason.MAX_EPOCHS
+                    return self._epoch_accuracy_threshold, self._report, StopReason.MAX_EPOCHS
         except KeyboardInterrupt:
             if not silent:
                 self.pause()

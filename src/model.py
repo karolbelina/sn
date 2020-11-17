@@ -9,5 +9,5 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def generate_dC_dθ(self, x: np.ndarray, y: np.ndarray) -> callable:
+    def dC_dθ(self, x: np.ndarray, y: np.ndarray) -> callable:
         pass

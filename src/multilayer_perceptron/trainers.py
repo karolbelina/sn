@@ -54,9 +54,7 @@ class SGDTrainer(AbstractTrainer):
         α = self._α
 
         for x, y in self._train_dataloader.get_batches():
-            dC_dθ = model.generate_dC_dθ(x, y)
-
-            θ = θ - α * dC_dθ(θ)
+            θ = θ - α * model.dC_dθ(x, y)(θ)
         
         model.θ = θ
 
@@ -80,9 +78,7 @@ class SGDMomentumTrainer(AbstractTrainer):
         v = np.zeros_like(θ)
 
         for x, y in self._train_dataloader.get_batches():
-            dC_dθ = model.generate_dC_dθ(x, y)
-
-            v = γ * v + α * dC_dθ(θ)
+            v = γ * v + α * model.dC_dθ(x, y)(θ)
             θ = θ - v
         
         model.θ = θ
@@ -107,9 +103,102 @@ class NesterovMomentumTrainer(AbstractTrainer):
         v = np.zeros_like(θ)
 
         for x, y in self._train_dataloader.get_batches():
-            dC_dθ = model.generate_dC_dθ(x, y)
-
-            v = γ * v + α * dC_dθ(θ - γ * v)
+            v = γ * v + α * model.dC_dθ(x, y)(θ - γ * v)
             θ = θ - v
         
+        model.θ = θ
+
+
+class AdagradTrainer(AbstractTrainer):
+    def __init__(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        learning_rate: float = 1e-2
+    ) -> None:
+        super().__init__(train_dataloader, val_dataloader)
+        self._α = learning_rate
+
+    def fit(self, model: MultilayerPerceptron) -> None:
+        θ = model.θ
+        α = self._α
+        ε = 1e-8
+        g = np.zeros_like(θ)
+
+        for x, y in self._train_dataloader.get_batches():
+            dC_dθ_θ = model.dC_dθ(x, y)(θ)
+
+            g = g + np.square(dC_dθ_θ)
+
+            θ = θ - α / np.sqrt(ε + g) * dC_dθ_θ
+        
+        model.θ = θ
+
+
+class AdadeltaTrainer(AbstractTrainer):
+    def __init__(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        learning_rate: float = 1e-2,
+        decay: float = 0.99
+    ) -> None:
+        super().__init__(train_dataloader, val_dataloader)
+        self._γ = decay
+
+    def fit(self, model: MultilayerPerceptron) -> None:
+        θ = model.θ
+        γ = self._γ
+        ε = 1e-8
+        g = np.zeros_like(θ)
+        s = np.zeros_like(θ)
+
+        for x, y in self._train_dataloader.get_batches():
+            dC_dθ_θ = model.dC_dθ(x, y)(θ)
+
+            g = (1 - γ) * np.square(dC_dθ_θ) + γ * g
+            Δθ = -np.sqrt(s + ε) / np.sqrt(g + ε) * dC_dθ_θ
+            s = (1 - γ) * np.square(Δθ) + γ * s
+            θ = θ + Δθ
+            
+        model.θ = θ
+
+
+class AdamTrainer(AbstractTrainer):
+    def __init__(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        learning_rate: float = 1e-2,
+        beta_1: float = 0.9,
+        beta_2: float = 0.999
+    ) -> None:
+        super().__init__(train_dataloader, val_dataloader)
+        self._α = learning_rate
+        self._β1 = beta_1
+        self._β2 = beta_2
+
+    def fit(self, model: MultilayerPerceptron) -> None:
+        θ = model.θ
+        α = self._α
+        β1 = self._β1
+        β2 = self._β2
+        ε = 1e-8
+        t = 0
+        m = np.zeros_like(θ)
+        v = np.zeros_like(θ)
+
+        for x, y in self._train_dataloader.get_batches():
+            t = t + 1
+
+            g = model.dC_dθ(x, y)(θ)
+
+            m = β1 * m + (1 - β1) * g
+            v = β2 * v + (1 - β2) * np.square(g)
+
+            m_hat = m / (1 - β1 ** t)
+            v_hat = v / (1 - β2 ** t)
+
+            θ = θ - α / (np.sqrt(v_hat) + ε) * m_hat
+            
         model.θ = θ

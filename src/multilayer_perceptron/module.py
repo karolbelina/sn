@@ -73,7 +73,7 @@ class MultilayerPerceptron(Model):
 
         return y_hat
 
-    def generate_dC_dθ(self, x: np.ndarray, y: np.ndarray) -> callable:
+    def dC_dθ(self, x: np.ndarray, y: np.ndarray) -> callable:
         m = x.shape[0]
 
         def dC_dθ(θ: np.ndarray) -> np.ndarray:

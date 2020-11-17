@@ -1,5 +1,4 @@
 from .module import MultilayerPerceptron
-from .parameters import Parameters, zeros_like
 from abc import abstractmethod
 from data_loader import DataLoader
 from model import Model
@@ -51,7 +50,7 @@ class SGDTrainer(AbstractTrainer):
         self._α = learning_rate
 
     def fit(self, model: MultilayerPerceptron) -> None:
-        θ = model._θ
+        θ = model.θ
         α = self._α
 
         for x, y in self._train_dataloader.get_batches():
@@ -59,7 +58,7 @@ class SGDTrainer(AbstractTrainer):
 
             θ = θ - α * dC_dθ(θ)
         
-        model._θ = θ
+        model.θ = θ
 
 
 class SGDMomentumTrainer(AbstractTrainer):
@@ -75,10 +74,10 @@ class SGDMomentumTrainer(AbstractTrainer):
         self._α = learning_rate
 
     def fit(self, model: MultilayerPerceptron) -> None:
-        θ = model._θ
+        θ = model.θ
         α = self._α
         γ = self._γ
-        v = zeros_like(θ)
+        v = np.zeros_like(θ)
 
         for x, y in self._train_dataloader.get_batches():
             dC_dθ = model.generate_dC_dθ(x, y)
@@ -86,7 +85,7 @@ class SGDMomentumTrainer(AbstractTrainer):
             v = γ * v + α * dC_dθ(θ)
             θ = θ - v
         
-        model._θ = θ
+        model.θ = θ
 
 
 class NesterovMomentumTrainer(AbstractTrainer):
@@ -102,10 +101,10 @@ class NesterovMomentumTrainer(AbstractTrainer):
         self._α = learning_rate
 
     def fit(self, model: MultilayerPerceptron) -> None:
-        θ = model._θ
+        θ = model.θ
         α = self._α
         γ = self._γ
-        v = zeros_like(θ)
+        v = np.zeros_like(θ)
 
         for x, y in self._train_dataloader.get_batches():
             dC_dθ = model.generate_dC_dθ(x, y)
@@ -113,4 +112,4 @@ class NesterovMomentumTrainer(AbstractTrainer):
             v = γ * v + α * dC_dθ(θ - γ * v)
             θ = θ - v
         
-        model._θ = θ
+        model.θ = θ

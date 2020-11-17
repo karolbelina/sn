@@ -1,8 +1,8 @@
 from activation_fns import ActivationFunction, Sigmoid
 from copy import copy, deepcopy
 from model import Model
-from random_fns import RandomFunction, Normal
 from typing import Optional
+from weight_initializers import WeightInitializer
 
 import numpy as np
 
@@ -11,8 +11,8 @@ class MultilayerPerceptron(Model):
     def __init__(
         self,
         layer_sizes: list[int],
+        weight_initializer: WeightInitializer,
         activation_fns: Optional[list[ActivationFunction]] = None,
-        random_fn: RandomFunction = Normal(),
     ) -> None:
         if activation_fns is None:
             activation_fns = [Sigmoid() for _ in range(len(layer_sizes) - 2)]
@@ -20,7 +20,7 @@ class MultilayerPerceptron(Model):
 
         self._layer_sizes = layer_sizes
         self._activation_fns = activation_fns
-        self.θ = self._encode_θ(*MultilayerPerceptron._initialize_θ(layer_sizes, random_fn))
+        self.θ = self._encode_θ(*MultilayerPerceptron._initialize_θ(layer_sizes, weight_initializer))
     
     @staticmethod
     def _get_shapes(layer_sizes: list[int]):
@@ -30,9 +30,9 @@ class MultilayerPerceptron(Model):
         return weight_shapes, bias_shapes
 
     @staticmethod
-    def _initialize_θ(layer_sizes: list[int], random_fn: RandomFunction) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    def _initialize_θ(layer_sizes: list[int], weight_initializer: WeightInitializer) -> tuple[list[np.ndarray], list[np.ndarray]]:
         weight_shapes, bias_shapes = MultilayerPerceptron._get_shapes(layer_sizes)
-        weights = [random_fn(s) for s in weight_shapes]
+        weights = [weight_initializer(fan_in, fan_out) for fan_in, fan_out in weight_shapes]
         biases = [np.zeros(s) for s in bias_shapes]
 
         return weights, biases

@@ -70,23 +70,3 @@ class HyperbolicTangent(ActivationFunction):
         result = copy(self)
         memo[id(self)] = result
         return result
-
-
-class Softmax(ActivationFunction):
-    def __call__(self, x: np.ndarray) -> np.ndarray:
-        # for numerical stability make the maximum of x to be 0
-        stable_x = x - x.max(axis=1)[:, None]
-        exp_x = np.exp(stable_x)
-
-        return exp_x / exp_x.sum(axis=1)[:, None]
-    
-    def derivative(self, x: np.ndarray) -> np.ndarray:
-        return np.ones_like(x)
-        
-    def __copy__(self):
-        return Softmax()
-        
-    def __deepcopy__(self, memo):
-        result = copy(self)
-        memo[id(self)] = result
-        return result

@@ -1,6 +1,7 @@
 from .module import MultilayerPerceptron
+from .parameters import Parameters, zeros_like
+from abc import abstractmethod
 from data_loader import DataLoader
-from layers import Layer
 from model import Model
 from trainer import Trainer
 from typing import Optional
@@ -8,70 +9,108 @@ from typing import Optional
 import numpy as np
 
 
-class SGDTrainer(Trainer):
+class AbstractTrainer(Trainer):
     def __init__(
         self,
         train_dataloader: DataLoader,
-        val_dataloader: Optional[DataLoader] = None,
-        learning_rate: float = 1e-3,
+        val_dataloader: Optional[DataLoader] = None
     ) -> None:
-        self._learning_rate = learning_rate
         self._train_dataloader = train_dataloader
         if val_dataloader is None:
             self._val_dataloader = train_dataloader
         else:
             self._val_dataloader = val_dataloader
-    
-    @staticmethod
-    def _cost_fn(output: np.ndarray, label: np.ndarray) -> np.ndarray:
-        stable_output = np.clip(output, 1e-12, None)
-        cross_e = (-np.log(stable_output) * label).sum(axis=1)
 
-        return cross_e.mean()
-    
-    @staticmethod
-    def _cost_fn_backward(output: np.ndarray, label: np.ndarray) -> np.ndarray:
-        stable_output = np.clip(output, 1e-12, None)
-
-        return stable_output - label
-
+    @abstractmethod
     def fit(self, model: MultilayerPerceptron) -> None:
-        for x, y in self._train_dataloader.get_batches():
-            y_hat = model(x)
-            da = self._cost_fn_backward(y_hat, y)
-
-            for layer in reversed(model._layers):
-                dw, db, da = layer.backpropagate(da)
-                self._update_layer_weights(layer, dw, db)
+        pass
     
     def validate(self, model: Model) -> tuple[float, object]:
-        def calculate_report(data: tuple[np.ndarray, np.ndarray]):
-            x, y_hat = data
-            y = model(x)
+        x, y = self._val_dataloader.get_data()
+        y_hat = model(x)
 
-            loss = self._cost_fn(y, y_hat)
+        result_classes = y_hat.argmax(axis=1)
+        label_classes = y.argmax(axis=1)
 
-            result_classes = y_hat.argmax(axis=1)
-            label_classes = y.argmax(axis=1)
+        Nc = (result_classes == label_classes).sum()
+        Nt = len(result_classes)
+        
+        error = (Nt - Nc) / Nt
 
-            Nc = (result_classes == label_classes).sum()
-            Nt = len(result_classes)
-            
-            accuracy = Nc / Nt
-            error = (Nt - Nc) / Nt
+        return error
 
-            return loss, accuracy, error
 
-        train_loss, train_accuracy, _ = calculate_report(self._val_dataloader.get_data())
-        val_loss, val_accuracy, val_error = calculate_report(self._val_dataloader.get_data())
+class SGDTrainer(AbstractTrainer):
+    def __init__(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        learning_rate: float = 1e-2,
+    ) -> None:
+        super().__init__(train_dataloader, val_dataloader)
+        self._α = learning_rate
 
-        return (val_error, {
-            'train_loss': train_loss,
-            'train_accuracy': train_accuracy,
-            'val_loss': val_loss,
-            'val_accuracy': val_accuracy
-        })
-    
-    def _update_layer_weights(self, layer: Layer, dw: np.ndarray, db: np.ndarray):
-        layer.update_weights(self._learning_rate * dw)
-        layer.update_biases(self._learning_rate * db)
+    def fit(self, model: MultilayerPerceptron) -> None:
+        θ = model._θ
+        α = self._α
+
+        for x, y in self._train_dataloader.get_batches():
+            dC_dθ = model.generate_dC_dθ(x, y)
+
+            θ = θ - α * dC_dθ(θ)
+        
+        model._θ = θ
+
+
+class SGDMomentumTrainer(AbstractTrainer):
+    def __init__(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        momentum_factor: float = 0.8,
+        learning_rate: float = 1e-2
+    ) -> None:
+        super().__init__(train_dataloader, val_dataloader)
+        self._γ = momentum_factor
+        self._α = learning_rate
+
+    def fit(self, model: MultilayerPerceptron) -> None:
+        θ = model._θ
+        α = self._α
+        γ = self._γ
+        v = zeros_like(θ)
+
+        for x, y in self._train_dataloader.get_batches():
+            dC_dθ = model.generate_dC_dθ(x, y)
+
+            v = γ * v + α * dC_dθ(θ)
+            θ = θ - v
+        
+        model._θ = θ
+
+
+class NesterovMomentumTrainer(AbstractTrainer):
+    def __init__(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        momentum_factor: float = 0.8,
+        learning_rate: float = 1e-2
+    ) -> None:
+        super().__init__(train_dataloader, val_dataloader)
+        self._γ = momentum_factor
+        self._α = learning_rate
+
+    def fit(self, model: MultilayerPerceptron) -> None:
+        θ = model._θ
+        α = self._α
+        γ = self._γ
+        v = zeros_like(θ)
+
+        for x, y in self._train_dataloader.get_batches():
+            dC_dθ = model.generate_dC_dθ(x, y)
+
+            v = γ * v + α * dC_dθ(θ - γ * v)
+            θ = θ - v
+        
+        model._θ = θ

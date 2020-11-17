@@ -44,7 +44,9 @@ class ResearchSupervisor:
             self._epoch_number += 1
 
             self._trainer.fit(self._model)
-            self._error, _ = self._trainer.validate(self._model)
+            self._error = self._trainer.validate(self._model)
+
+            print(f"epoch {self._epoch_number}, accuracy = {1 - self._error:.2%}")
 
             if self._error <= self._epsilon and np.isinf(self._epoch_accuracy_threshold):
                 self._epoch_accuracy_threshold = self._epoch_number
@@ -123,7 +125,7 @@ class Supervisor:
                 if self._epoch_number >= self._max_epochs:
                     if not silent:
                         print("Reached the maximum number of epochs")
-                    return self._epoch_accuracy_threshold, self._report, StopReason.MAX_EPOCHS
+                    return self._epoch_number, self._report, StopReason.MAX_EPOCHS
         except KeyboardInterrupt:
             if not silent:
                 self.pause()

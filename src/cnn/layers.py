@@ -89,6 +89,145 @@ class FullyConnectedLayer(Layer):
         return dC_dθ, dC_da
 
 
+class ConvolutionLayer(Layer):
+    def __init__(
+        self,
+        input_size: tuple[int, int],
+        output_size: tuple[int, int],
+        kernel_size: tuple[int, int],
+        maps: int,
+        stride: int = 1,
+    ) -> None:
+        Wx, Wy = input_size
+        Vx, Vy = output_size
+        Fx, Fy = kernel_size
+        S = stride
+        Px = (S * (Vx - 1) - Wx + Fx) / 2
+        Py = (S * (Vy - 1) - Wy + Fy) / 2
+        
+        assert Px % 1 == 0 and Py % 1 == 0
+
+        self._W = (Wx, Wy)
+        self._V = (Vx, Vy)
+        self._F = (Fx, Fy)
+        self._P = (int(Px), int(Py))
+        self._S = S
+        self._feature_map_count = maps
+
+        self._feature_maps = None
+
+    def initialize_θ(self, weight_initializer: WeightInitializer) -> np.ndarray:
+        Fx, Fy = self._F
+        feature_maps = [weight_initializer(Fx, Fy) for _ in range(self._feature_map_count)]
+
+        return self._encode_θ(feature_maps)
+
+    def _decode_θ(self, θ: np.ndarray) -> list[np.ndarray]:
+        Fx, Fy = self._F
+
+        arrays = []
+
+        decoded = 0
+        for _ in range(self._feature_map_count):
+            arrays.append(np.reshape(θ[decoded:decoded + Fx * Fy], (Fx, Fy)))
+            decoded += Fx * Fy
+        
+        return arrays
+
+    def _encode_θ(self, feature_maps: list[np.ndarray]) -> np.ndarray:
+        return np.hstack(m.flatten() for m in feature_maps)
+
+    def get_parameter_count(self) -> int:
+        Fx, Fy = self._F
+
+        return Fx * Fy * self._feature_map_count
+
+    def attach(self, θ: np.ndarray) -> None:
+        self._feature_maps = self._decode_θ(θ)
+
+    @staticmethod
+    def _convolve(x: np.ndarray, kernel: np.ndarray):
+        s = (x.shape[0],) + kernel.shape + tuple(np.subtract(x.shape[1:], kernel.shape) + 1)
+        strd = np.lib.stride_tricks.as_strided
+        subM = strd(x, shape=s, strides=(x.strides[0],) + x.strides[1:] * 2)
+        return np.einsum('...ij,...ijkl->...kl', kernel, subM)
+    
+    @staticmethod
+    def _pad(x: np.ndarray, padding: tuple[int, int]):
+        Px, Py = padding
+        padding = [(0, 0), (Px, Px), (Py, Py)]
+        return np.pad(x, padding, mode='constant')
+
+    def feedforward(self, x: np.ndarray) -> np.ndarray:
+        Wx, Wy = self._W
+        Vx, Vy = self._V
+        Px, Py = self._P
+
+        return np.hstack([np.reshape(ConvolutionLayer._pad(
+            ConvolutionLayer._convolve(
+                np.reshape(x, (-1, Wx, Wy)),
+                feature_map
+            ),
+            (Px, Py)
+        ), (-1, Vx * Vy)) for feature_map in self._feature_maps])
+
+    def backpropagate(self, dC_da_prev: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        grad = self.initialize_θ(lambda x, y: np.zeros((x, y)))
+
+        return grad, dC_da_prev
+
+
+class MaxPoolingLayer(Layer):
+    def __init__(
+        self,
+        input_size: tuple[int, int],
+        output_size: tuple[int, int],
+    ) -> None:
+        Ix, Iy = input_size
+        Ox, Oy = output_size
+        Wx = Ix / Ox
+        Wy = Iy / Oy
+
+        assert Wx % 1 == 0 and Wy % 1 == 0
+
+        self._input_size = input_size
+        self._window_size = (int(Wx), int(Wy))
+
+    def initialize_θ(self, weight_initializer: WeightInitializer) -> np.ndarray:
+        return np.empty((0,))
+
+    def get_parameter_count(self) -> int:
+        return 0
+
+    def attach(self, θ: np.ndarray) -> None:
+        pass
+
+    def _max_pool(self, x: np.ndarray):
+        N = x.shape[0]
+        m, n = x.shape[1:]
+        mk = m // 2
+        nl = n // 2
+        q1 = x[:, :mk * 2, :nl * 2].reshape(N, mk, 2, nl, 2).max(axis=(2, 4))
+        q2 = x[:, mk * 2:, :nl * 2].reshape(N, m - mk * 2, nl, 2).max(axis=3)
+        q3 = x[:, :mk * 2, nl * 2:].reshape(N, mk, 2, n - nl * 2).max(axis=2)
+        q4 = x[:, mk * 2:, nl * 2:].reshape(N, m - mk * 2, n - nl * 2)
+        a = np.concatenate((q1, q3), axis=2)
+        b = np.concatenate((q2, q4), axis=2)
+        return np.concatenate((a, b), axis=1)
+
+    def feedforward(self, x: np.ndarray) -> np.ndarray:
+        Ix, Iy = self._input_size
+        Wx, Wy = self._window_size
+        Ox, Oy = Ix // Wx, Iy // Wy
+        N = x.shape[1] // (Ix * Iy)
+
+        return np.hstack(np.reshape(self._max_pool(a), (-1, Ox * Oy))
+                         for a in np.reshape(x, (N, -1, Ix, Iy)))
+
+    def backpropagate(self, dC_da_prev: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        return np.empty((0,)), dC_da_prev
+
+
 class ActivationFunction(Layer):
     def __init__(self) -> None:
         self._z = None
@@ -134,3 +273,25 @@ class Sigmoid(ActivationFunction):
         sig_x = self(x)
 
         return sig_x * (1 - sig_x)
+
+
+class ReLU(ActivationFunction):
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def __call__(self, x: np.ndarray) -> np.ndarray:
+        return np.maximum(0, x)
+
+    def _derivative(self, x: np.ndarray) -> np.ndarray:
+        return np.where(x >= 0, 1, 0)
+
+
+class HyperbolicTangent(ActivationFunction):
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def __call__(self, x: np.ndarray) -> np.ndarray:
+        return np.tanh(x)
+
+    def _derivative(self, x: np.ndarray) -> np.ndarray:
+        return 1.0 - np.tanh(x) ** 2

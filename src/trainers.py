@@ -1,4 +1,3 @@
-from .module import MultilayerPerceptron
 from abc import abstractmethod
 from data_loader import DataLoader
 from model import Model
@@ -21,7 +20,7 @@ class AbstractTrainer(Trainer):
             self._val_dataloader = val_dataloader
 
     @abstractmethod
-    def fit(self, model: MultilayerPerceptron) -> None:
+    def fit(self, model: Model) -> None:
         pass
     
     @staticmethod
@@ -58,7 +57,7 @@ class SGDTrainer(AbstractTrainer):
         super().__init__(train_dataloader, val_dataloader)
         self._α = learning_rate
 
-    def fit(self, model: MultilayerPerceptron) -> None:
+    def fit(self, model: Model) -> None:
         θ = model.θ
         α = self._α
 
@@ -80,7 +79,7 @@ class SGDMomentumTrainer(AbstractTrainer):
         self._γ = momentum_factor
         self._α = learning_rate
 
-    def fit(self, model: MultilayerPerceptron) -> None:
+    def fit(self, model: Model) -> None:
         θ = model.θ
         α = self._α
         γ = self._γ
@@ -105,7 +104,7 @@ class NesterovMomentumTrainer(AbstractTrainer):
         self._γ = momentum_factor
         self._α = learning_rate
 
-    def fit(self, model: MultilayerPerceptron) -> None:
+    def fit(self, model: Model) -> None:
         θ = model.θ
         α = self._α
         γ = self._γ
@@ -128,7 +127,7 @@ class AdagradTrainer(AbstractTrainer):
         super().__init__(train_dataloader, val_dataloader)
         self._α = learning_rate
 
-    def fit(self, model: MultilayerPerceptron) -> None:
+    def fit(self, model: Model) -> None:
         θ = model.θ
         α = self._α
         ε = 1e-8
@@ -155,7 +154,7 @@ class AdadeltaTrainer(AbstractTrainer):
         super().__init__(train_dataloader, val_dataloader)
         self._γ = decay
 
-    def fit(self, model: MultilayerPerceptron) -> None:
+    def fit(self, model: Model) -> None:
         θ = model.θ
         γ = self._γ
         ε = 1e-8
@@ -187,7 +186,7 @@ class AdamTrainer(AbstractTrainer):
         self._β1 = beta_1
         self._β2 = beta_2
 
-    def fit(self, model: MultilayerPerceptron) -> None:
+    def fit(self, model: Model) -> None:
         θ = model.θ
         α = self._α
         β1 = self._β1

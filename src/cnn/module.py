@@ -44,7 +44,9 @@ class ConvolutionalNeuralNetwork(Model):
         for layer in self._layers:
             x = layer.feedforward(x)
         
-        return x
+        y_hat = ConvolutionalNeuralNetwork.softmax(x)
+        
+        return y_hat
     
     def dC_dθ(self, x: np.ndarray, y: np.ndarray) -> callable:
         m = x.shape[0]

@@ -90,9 +90,7 @@ class FullyConnectedLayer(Layer):
 
 
 class ActivationFunction(Layer):
-    def __init__(self, size: int) -> None:
-        self._size = size
-
+    def __init__(self) -> None:
         self._z = None
 
     def initialize_θ(self, weight_initializer: WeightInitializer) -> np.ndarray:
@@ -126,8 +124,8 @@ class ActivationFunction(Layer):
 
 
 class Sigmoid(ActivationFunction):
-    def __init__(self, size: int) -> None:
-        super().__init__(size)
+    def __init__(self) -> None:
+        super().__init__()
     
     def __call__(self, x: np.ndarray) -> np.ndarray:
         return 1 / (1 + np.exp(-x))

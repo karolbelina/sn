@@ -24,9 +24,18 @@ class AbstractTrainer(Trainer):
     def fit(self, model: MultilayerPerceptron) -> None:
         pass
     
+    @staticmethod
+    def loss(output: np.ndarray, label: np.ndarray) -> np.ndarray:
+        stable_output = np.clip(output, 1e-12, None)
+        cross_e = (-np.log(stable_output) * label).sum(axis=1)
+
+        return cross_e.mean()
+    
     def validate(self, model: Model) -> tuple[float, object]:
         x, y = self._val_dataloader.get_data()
         y_hat = model(x)
+
+        loss = AbstractTrainer.loss(y_hat, y)
 
         result_classes = y_hat.argmax(axis=1)
         label_classes = y.argmax(axis=1)
@@ -36,7 +45,7 @@ class AbstractTrainer(Trainer):
         
         error = (Nt - Nc) / Nt
 
-        return error
+        return error, loss
 
 
 class SGDTrainer(AbstractTrainer):

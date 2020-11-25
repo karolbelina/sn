@@ -21,47 +21,42 @@ class ResearchSupervisor:
         model: Model,
         trainer: Trainer,
         max_epochs: Optional[int] = None,
-        epsilon: float = 0,
-        early_stopping_threshold: float = np.inf
+        epsilon: float = 0
     ) -> None:
         self._max_epochs = max_epochs if max_epochs is not None else np.inf
         self._epsilon = epsilon
-        self._early_stopping_threshold = early_stopping_threshold
-
-        self._best_error = np.inf
-        self._best_report = None
 
         self._model = model
-        self._error = np.inf
-
-        self._epoch_accuracy_threshold = np.inf
-        self._epoch_number = 0
-        
         self._trainer = trainer
 
-    def __call__(self) -> tuple[int, StopReason]:
+    def __call__(self, verbose: bool = False) -> tuple[int, float, list[float]]:
+        best_error = np.inf
+        
+        epoch_accuracy_threshold = np.inf
+        epoch_number = 0
+
+        losses = []
+
         while True:
-            self._epoch_number += 1
+            epoch_number += 1
 
             self._trainer.fit(self._model)
-            self._error = self._trainer.validate(self._model)
+            error, loss = self._trainer.validate(self._model)
 
-            print(f"epoch {self._epoch_number}, accuracy = {1 - self._error:.2%}")
+            losses.append(loss)
 
-            if self._error <= self._epsilon and np.isinf(self._epoch_accuracy_threshold):
-                self._epoch_accuracy_threshold = self._epoch_number
+            if verbose:
+                print(f"epoch {epoch_number}, accuracy = {1 - error:.2%}, loss = {loss:.2f}")
+
+            if error <= self._epsilon and np.isinf(epoch_accuracy_threshold):
+                epoch_accuracy_threshold = epoch_number
             
-            if self._error < self._best_error:
-                self._best_error = self._error
+            if error < best_error:
+                best_error = error
 
-            error_delta = self._error - self._best_error
-            if error_delta >= self._early_stopping_threshold:
-                self._error = self._best_error
-                return self._epoch_accuracy_threshold, 1 - self._best_error
-
-            if self._epoch_number >= self._max_epochs:
-                self._error = self._best_error
-                return self._epoch_accuracy_threshold, 1 - self._best_error
+            if epoch_number >= self._max_epochs:
+                error = best_error
+                return epoch_accuracy_threshold, 1 - best_error, losses
 
 
 class Supervisor:

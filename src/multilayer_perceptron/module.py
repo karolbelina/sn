@@ -118,7 +118,7 @@ class MultilayerPerceptron(Model):
             dC_dws.append(dC_dw)
             dC_dbs.append(dC_db)
 
-            for w, z, prev_a, f in reversed(list(zip(weights[:-1], zs, prev_as, self._activation_fns))):
+            for w, z, prev_a, f in reversed(list(zip(weights[:-1], zs[:-1], prev_as[:-1], self._activation_fns))):
                 da_dz = f.derivative(z)
                 dz_db = np.ones((1, dC_da.shape[0]))
                 dz_dw = prev_a

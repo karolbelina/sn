@@ -52,7 +52,7 @@ class ConvolutionalNeuralNetwork(Model):
         m = x.shape[0]
 
         def aux(θ: np.ndarray) -> np.ndarray:
-            layer_parameters = self._split_θ(self.θ)
+            layer_parameters = self._split_θ(θ)
             for layer, parameters in zip(self._layers, layer_parameters):
                 layer.attach(parameters)
             
